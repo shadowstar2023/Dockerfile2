@@ -1,36 +1,27 @@
 FROM daxia2023/choreo:v5
 
-# 设置环境变量
-ARG PW
-ENV PW $PW
+# 更新包管理工具和安装必要的软件
+RUN apk update \
+    && apk add --no-cache bash curl unzip shadow openssl \
+    && apk add --no-cache nodejs npm
 
-# 更新系统并安装基本工具
-RUN apk update && \
-    apk add --no-cache bash curl shadow
-
-# 设置密码，并创建用户
-RUN useradd -m -p $(openssl passwd -1 $PW) -u 10016 pn
-
-# 将用户添加到 sudo 组
-RUN addgroup sudo && usermod -aG sudo pn
-
-# 更改文件和目录所有者
-RUN chown -R pn:pn /
+# 创建用户和设置密码
+RUN groupadd sudo \
+    && useradd -m pn -u 10016 \
+    && echo 'pn:10016' | chpasswd \
+    && usermod -aG sudo pn
 
 # 设置工作目录
 WORKDIR /app
 
-# 复制应用程序代码
+# 将应用程序代码复制到工作目录
 COPY . /app
 
-# 设置权限和安装依赖
-RUN chmod 755 arg.sh upload.sh upload2.sh cff.js web.js nezha.js && \
-    npm install
+# 设置容器的默认用户
+USER 10016
 
-# 切换到新创建的用户
-USER pn
-
-# 清理不必要的系统缓存
+# 在容器启动时执行的命令
+CMD ["npm", "start"]
 RUN rm -rf /var/cache/apk/*
 
 # 启动应用程序
